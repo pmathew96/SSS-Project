@@ -4,9 +4,9 @@ import java.util.*;
  * Created by Paul on 4/14/2016.
  */
 class Consituency{
-    String constituencyname;
+    String name;
     int totalelectors;
-    List<Candidate> constituencycandidate = new ArrayList<Candidate>();
+    List<Candidate> candidate = new ArrayList<Candidate>();
     int generalturnout;
     int postalturnout;
     int totalturnout;
@@ -22,4 +22,27 @@ class Candidate{
     int postalvotes;
     int totalvotes;
     float votepercentage;
+}
+public class ECIParser {
+    public static void candidateDetails(File er) {
+        try {
+            FileReader erReader = new FileReader(er);
+            LineNumberReader erLine = new LineNumberReader(erReader);
+            String line;
+            while ((line = erLine.readLine()) != null) {
+                if(line.isEmpty()) {
+                    continue;
+                }
+                else if(line.contains("DETAILED RESULTS")){
+                    System.out.println(line);
+                }
+            }
+        } catch (IOException e){
+            System.out.println(e);
+        }
+    }
+    public static void main(String[] args){
+        File electionresults = new File("C:/Users/Paul/Documents/results.txt");
+        candidateDetails(electionresults);
+    }
 }
