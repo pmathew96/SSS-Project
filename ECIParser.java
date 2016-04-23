@@ -30,6 +30,11 @@ public class ECIParser {
     static String commaDelimiter = ",";
     static String newLineSeparator = "\n";
     static String candidateHeader = "Name";
+    /*
+    Method that takes an object of type constituency and a filewriter as inputs and
+    writes the constituency name and the names of all the candidates under the
+    constituency into a csv file. This method is called by the readResultsFromFile() method.
+     */
     public static void writeResultsIntoFile(Constituency constituency, FileWriter fileWriter){
 
         try{
@@ -48,6 +53,11 @@ public class ECIParser {
             System.out.println(e);
         }
     }
+    /*
+    Method that takes a file as input and reads the details of each constituency and
+    all the candidates under that constituency and writes all these details to a
+    csv file.
+     */
     public static void readResultsFromFile(File resultfile) {
         FileWriter fileWriter = null;
         try {
