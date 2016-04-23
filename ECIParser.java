@@ -6,10 +6,10 @@ import java.util.regex.Pattern;
 /**
  * Created by Paul on 4/14/2016.
  */
-class Consituency{
+class Constituency{
     String name;
     int totalelectors;
-    List<Candidate> candidate = new ArrayList<Candidate>();
+    List<Candidate> candidates = new ArrayList<Candidate>();
     int generalturnout;
     int postalturnout;
     int totalturnout;
@@ -27,9 +27,34 @@ class Candidate{
     float votepercentage;
 }
 public class ECIParser {
+    static String commaDelimiter = ",";
+    static String newLineSeparator = "\n";
+    static String candidateHeader = "Name";
+    public static void writeResultsIntoFile(Constituency constituency, FileWriter fileWriter){
+
+        try{
+
+            fileWriter.append("Constituency Name:");
+            fileWriter.append(commaDelimiter);
+            fileWriter.append(constituency.name);
+            fileWriter.append(newLineSeparator);
+            fileWriter.append(candidateHeader);
+            fileWriter.append(newLineSeparator);
+            for(Candidate candidate:constituency.candidates){
+                fileWriter.append(candidate.name);
+                fileWriter.append(newLineSeparator);
+            }
+        }catch (Exception e){
+            System.out.println(e);
+        }
+    }
     public static void readResultsFromFile(File resultfile) {
+        FileWriter fileWriter = null;
         try {
-            int flag = 0;
+            fileWriter = new FileWriter("res.csv");
+            Constituency constituency = new Constituency();
+            Candidate candidate = null;
+            int flag = 0, constituencyFlag = 0;
             FileReader fr = new FileReader(resultfile);
             LineNumberReader ln = new LineNumberReader(fr);
             String line;
@@ -38,6 +63,7 @@ public class ECIParser {
             Pattern candidatepattern = Pattern.compile(candidateline);
             Pattern constituencypattern = Pattern.compile(constituencyline);
             while((line = ln.readLine()) != null){
+                candidate = new Candidate();
                 if (line.toLowerCase().contains("detailed results")){
                     flag++;
                 }
@@ -46,17 +72,34 @@ public class ECIParser {
                     Matcher constituencymatcher = constituencypattern.matcher(line);
                     if (candidatematcher.find()) {
                         System.out.println(line);
+                        candidate.name = line;
+                        constituency.candidates.add(candidate);
+                        constituencyFlag = 1;
                     }
                     if (constituencymatcher.find()){
+                       if(constituencyFlag == 1){       //finding next constituency
+                           System.out.println("Next Constituency");
+                           writeResultsIntoFile(constituency, fileWriter);
+                           constituency = new Constituency();
+                        }
                         System.out.println(line);
+                        constituency.name = line;
+                        constituencyFlag = 0;
                     }
                 }
             }
         } catch (IOException e){
             System.out.println(e);
+        }finally {
+            try{
+                fileWriter.flush();
+                fileWriter.close();
+            }catch(IOException e){
+                System.out.println("Error while flushing/closing file");
+            }
         }
     }
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException{
         File electionresults = new File("C:/Users/Paul/Documents/results.txt");
         readResultsFromFile(electionresults);
     }
