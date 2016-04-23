@@ -2,54 +2,60 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+
 
 /**
  * Created by Paul on 4/14/2016.
  */
 class Constituency{
     String name;
-    int totalelectors;
+    //int totalelectors;
     List<Candidate> candidates = new ArrayList<Candidate>();
+    /*
     int generalturnout;
     int postalturnout;
     int totalturnout;
     float totalpercentage;
+    */
 }
 class Candidate{
+    String constituency;
     String name;
-    char sex;
-    int age;
+    String sex;
+    String age;
     String category;
     String party;
+    /*
     int generalvotes;
     int postalvotes;
     int totalvotes;
     float votepercentage;
+    */
 }
 public class ECIParser {
-    static String commaDelimiter = ",";
     static String newLineSeparator = "\n";
-    static String candidateHeader = "Name";
+    static Object[] fileHeader = {"Constituency","Name","Sex","Age","Category","Party"};
     /*
     Method that takes an object of type constituency and a filewriter as inputs and
     writes the constituency name and the names of all the candidates under the
     constituency into a csv file. This method is called by the readResultsFromFile() method.
      */
-    public static void writeResultsIntoFile(Constituency constituency, FileWriter fileWriter){
+    public static void writeResultsIntoFile(Constituency constituency, CSVPrinter csvp){
 
         try{
-
-            fileWriter.append("Constituency Name:");
-            fileWriter.append(commaDelimiter);
-            fileWriter.append(constituency.name);
-            fileWriter.append(newLineSeparator);
-            fileWriter.append(candidateHeader);
-            fileWriter.append(newLineSeparator);
-            for(Candidate candidate:constituency.candidates){
-                fileWriter.append(candidate.name);
-                fileWriter.append(newLineSeparator);
+            for (Candidate c:constituency.candidates){
+                List candidateData = new ArrayList();
+                candidateData.add(c.constituency);
+                candidateData.add(c.name);
+                candidateData.add(c.sex);
+                candidateData.add(c.age);
+                candidateData.add(c.category);
+                candidateData.add(c.party);
+                csvp.printRecord(candidateData);
             }
-        }catch (Exception e){
+        }catch (IOException e){
             System.out.println(e);
         }
     }
@@ -62,18 +68,30 @@ public class ECIParser {
         FileWriter fileWriter = null;
         try {
             fileWriter = new FileWriter("res.csv");
+            CSVPrinter csvp = null;
+            CSVFormat csvf = CSVFormat.DEFAULT.withRecordSeparator(newLineSeparator);
+            csvp = new CSVPrinter(fileWriter, csvf);
+            csvp.printRecord(fileHeader);
             Constituency constituency = new Constituency();
-            Candidate candidate = null;
-            int flag = 0, constituencyFlag = 0;
+            Candidate candidate = new Candidate();
+            int flag = 0, constituencyFlag = 0, detailCounter = 0;
             FileReader fr = new FileReader(resultfile);
-            LineNumberReader ln = new LineNumberReader(fr);
-            String line;
+            LineNumberReader lnr = new LineNumberReader(fr);
+            LineNumberReader nextReader;
+            String line, nextLines;
             String candidateline = "(\\A)(\\d+)(\\s)(\\w*)";
             String constituencyline = "(\\A)(\\d+)([.])(\\s)(\\w+)";
+            String sexline = "(\\A)([M F])";
+            String ageline = "(\\A)^([0-9]){2}$";
+            String categoryline = "(\\A)([SC GEN ST]{1,3}$)";
+            String partyline = "(\\A)^(?!GEN|TURNOUT)([A-Z()]+){3,10}$";
             Pattern candidatepattern = Pattern.compile(candidateline);
             Pattern constituencypattern = Pattern.compile(constituencyline);
-            while((line = ln.readLine()) != null){
-                candidate = new Candidate();
+            Pattern sexpattern = Pattern.compile(sexline);
+            Pattern agepattern = Pattern.compile(ageline);
+            Pattern categorypattern = Pattern.compile(categoryline);
+            Pattern partypattern = Pattern.compile(partyline);
+            while((line = lnr.readLine()) != null){
                 if (line.toLowerCase().contains("detailed results")){
                     flag++;
                 }
@@ -81,20 +99,66 @@ public class ECIParser {
                     Matcher candidatematcher = candidatepattern.matcher(line);
                     Matcher constituencymatcher = constituencypattern.matcher(line);
                     if (candidatematcher.find()) {
-                        System.out.println(line);
                         candidate.name = line;
-                        constituency.candidates.add(candidate);
+                        candidate.constituency = constituency.name;
+                        detailCounter = 1;
                         constituencyFlag = 1;
+                        nextReader = lnr;
+                        while(!(nextLines = nextReader.readLine()).isEmpty()){
+                            nextLines.trim();
+                            candidate.name = candidate.name.concat(" "+nextLines);
+                        }
+                       // System.out.println(candidate.name);
                     }
                     if (constituencymatcher.find()){
-                       if(constituencyFlag == 1){       //finding next constituency
-                           System.out.println("Next Constituency");
-                           writeResultsIntoFile(constituency, fileWriter);
+                       if(constituencyFlag == 1){
+                           writeResultsIntoFile(constituency, csvp);
                            constituency = new Constituency();
                         }
-                        System.out.println(line);
                         constituency.name = line;
+                        //System.out.println(constituency.name);
                         constituencyFlag = 0;
+                    }
+                    if (detailCounter > 0 && detailCounter <= 5){
+                        if(!line.isEmpty()) {
+                            switch (detailCounter) {
+                                case 1:
+                                    Matcher sexmatcher = sexpattern.matcher(line);
+                                    if(sexmatcher.find()) {
+                                        candidate.sex = line;
+                                        detailCounter++;
+                                    }
+                                    break;
+                                case 2:
+                                    Matcher agematcher = agepattern.matcher(line);
+                                    if(agematcher.find()) {
+                                        candidate.age = line;
+                                        detailCounter++;
+                                    }
+                                    break;
+                                case 3:
+                                    Matcher categorymatcher = categorypattern.matcher(line);
+                                    if (categorymatcher.find()) {
+                                        candidate.category = line;
+                                        detailCounter++;
+                                    }
+                                    break;
+                                case 4:
+                                    Matcher partymatcher = partypattern.matcher(line);
+                                    if(partymatcher.find()) {
+                                        candidate.party = line;
+                                        detailCounter++;
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                    if (detailCounter >= 5){
+                        constituency.candidates.add(candidate);
+                        candidate = new Candidate();
+                        detailCounter = 0;
                     }
                 }
             }
