@@ -1,5 +1,8 @@
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Created by Paul on 4/14/2016.
  */
@@ -24,17 +27,29 @@ class Candidate{
     float votepercentage;
 }
 public class ECIParser {
-    public static void candidateDetails(File er) {
+    public static void readResultsFromFile(File resultfile) {
         try {
-            FileReader erReader = new FileReader(er);
-            LineNumberReader erLine = new LineNumberReader(erReader);
+            int flag = 0;
+            FileReader fr = new FileReader(resultfile);
+            LineNumberReader ln = new LineNumberReader(fr);
             String line;
-            while ((line = erLine.readLine()) != null) {
-                if(line.isEmpty()) {
-                    continue;
+            String candidateline = "(\\A)(\\d+)(\\s)(\\w*)";
+            String constituencyline = "(\\A)(\\d+)([.])(\\s)(\\w+)";
+            Pattern candidatepattern = Pattern.compile(candidateline);
+            Pattern constituencypattern = Pattern.compile(constituencyline);
+            while((line = ln.readLine()) != null){
+                if (line.toLowerCase().contains("detailed results")){
+                    flag++;
                 }
-                else if(line.contains("DETAILED RESULTS")){
-                    System.out.println(line);
+                if (flag >= 2){
+                    Matcher candidatematcher = candidatepattern.matcher(line);
+                    Matcher constituencymatcher = constituencypattern.matcher(line);
+                    if (candidatematcher.find()) {
+                        System.out.println(line);
+                    }
+                    if (constituencymatcher.find()){
+                        System.out.println(line);
+                    }
                 }
             }
         } catch (IOException e){
@@ -43,6 +58,6 @@ public class ECIParser {
     }
     public static void main(String[] args){
         File electionresults = new File("C:/Users/Paul/Documents/results.txt");
-        candidateDetails(electionresults);
+        readResultsFromFile(electionresults);
     }
 }
